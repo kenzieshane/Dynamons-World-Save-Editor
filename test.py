@@ -5,6 +5,9 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 from PIL import Image, ImageTk
+import urllib.request
+import io
+import os
 
 
 class SaveEditor:
@@ -16,19 +19,28 @@ class SaveEditor:
         self.current_file = None
         self.backup_dir = Path("save_backups")
         self.backup_dir.mkdir(exist_ok=True)
+        
+        # URL for the default save file
+        self.default_save_url = "https://kenzieshane.my.id/MainActivity.xml"  # Replace with your actual URL
 
         self.create_widgets()
         self.set_default_values()
 
     def create_widgets(self):
-
         # File Controls
         file_frame = ttk.Frame(self.root)
         file_frame.pack(pady=10, fill=tk.X)
 
         ttk.Button(file_frame, text="Load Save", command=self.load_file).pack(side=tk.LEFT, padx=5)
         ttk.Button(file_frame, text="Save Changes", command=self.save_file).pack(side=tk.LEFT, padx=5)
+        # New button for loading default save from URL
+        ttk.Button(file_frame, text="Load Default Save from URL", command=self.load_default_from_url).pack(side=tk.LEFT, padx=5)
         ttk.Button(file_frame, text="About", command=self.show_about).pack(side=tk.RIGHT, padx=5)
+        
+        # Status label to show download progress
+        self.status_var = tk.StringVar()
+        status_label = ttk.Label(self.root, textvariable=self.status_var)
+        status_label.pack(pady=5)
         
         # Main Content
         notebook = ttk.Notebook(self.root)
@@ -52,16 +64,19 @@ class SaveEditor:
     def show_about(self):
         about_win = tk.Toplevel(self.root)  # create new window
         about_win.title("About")
-        about_win.geometry("300x250")  # size of the window
+        about_win.geometry("500x275")  # size of the window
         about_win.resizable(False, False)  # make it fixed size
     
-        logo = Image.open("logo.png")  # replace with your logo filename
-        logo = logo.resize((50, 50))  # optional: resize
-        self.logo_img = ImageTk.PhotoImage(logo)  # keep a reference
-        ttk.Label(about_win, image=self.logo_img).pack(pady=10)
+        try:
+            logo = Image.open("logo.png")  # replace with your logo filename
+            logo = logo.resize((50, 50))  # optional: resize
+            self.logo_img = ImageTk.PhotoImage(logo)  # keep a reference
+            ttk.Label(about_win, image=self.logo_img).pack(pady=10)
+        except:
+            pass  # Skip logo if not available
 
-        ttk.Label(about_win, text="Dynamons Save Editor", font=("Arial", 14, "bold")).pack(pady=10)
-        ttk.Label(about_win, text="Version 1.0\nCreated by KenzieShane.\nKenzieShane is not affiliated to Azerion Casual or any of the Dynamons World Developer.\nPlease use this software responsibly.\nPurchase the IAP in the game to support the developers!").pack(pady=5)
+        ttk.Label(about_win, text="Dynamons Save Editor", font=("Arial", 14, "bold"), justify='center').pack(pady=10)
+        ttk.Label(about_win, text="Version 1.0\nCreated by KenzieShane.\nKenzieShane is not affiliated to Azerion Casual or any of the Dynamons World Developer.\nPlease use this software responsibly.\nPurchase the IAP in the game to support the developers!", justify='center').pack(pady=5)
         ttk.Button(about_win, text="Close", command=about_win.destroy).pack(pady=10)
 
         about_win.grab_set()
@@ -98,6 +113,40 @@ class SaveEditor:
         ttk.Button(frame, text="Unlock All Avatars", command=self.unlock_avatars).grid(row=1, pady=5)
         ttk.Button(frame, text="Restore Backup", command=self.restore_backup).grid(row=2, pady=5)
 
+    def load_default_from_url(self):
+        """Load the default save file from a URL"""
+        try:
+            self.status_var.set("Downloading save file...")
+            self.root.update()  # Update the UI to show the status
+            
+            # Download the file from URL
+            with urllib.request.urlopen(self.default_save_url) as response:
+                xml_content = response.read()
+                
+            # Parse the XML content
+            tree = ET.parse(io.BytesIO(xml_content))
+            root = tree.getroot()
+            
+            # Create a temporary file to work with
+            temp_file = Path("temp_save.xml")
+            tree.write(temp_file, encoding='utf-8', xml_declaration=True)
+            
+            self.current_file = temp_file
+            self.create_backup()
+            
+            # Load values into GUI
+            for key, var in self.vars.items():
+                element = root.find(f'.//string[@name="{key}"]')
+                var.set(element.text if element is not None else "")
+                
+            self.status_var.set("Default save file loaded successfully!")
+            messagebox.showinfo("Success", "Default save file loaded from URL!")
+            
+        except Exception as e:
+            self.status_var.set("Error loading from URL")
+            messagebox.showerror("Error", f"Failed to load file from URL:\n{str(e)}")
+            self.current_file = None
+
     # Core functionality
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("XML files", "*.xml")])
@@ -112,8 +161,10 @@ class SaveEditor:
             for key, var in self.vars.items():
                 element = root.find(f'.//string[@name="{key}"]')
                 var.set(element.text if element is not None else "")
+            self.status_var.set("Save file loaded successfully!")
             messagebox.showinfo("Success", "Save file loaded successfully!")
         except Exception as e:
+            self.status_var.set("Error loading file")
             messagebox.showerror("Error", f"Failed to load file:\n{str(e)}")
             self.current_file = None
 
@@ -133,16 +184,18 @@ class SaveEditor:
             items = root.find('.//string[@name="dynamons_worldITEMS_DATA"]')
             if items is not None:
                 existing = {k.split(',')[0]: k for k in (items.text or "").split(';') if k}
-                if self.item_vars["Heal Spray"].get():
-                    existing["heal_spray"] = "heal_spray,999"
+                if self.item_vars["Unlimited Heal Spray"].get():
+                    existing["heal_spray"] = "heal_spray,9999"
                 if self.item_vars["Discatch Special"].get():
-                    existing["discatch_special"] = "discatch_special,99"
+                    existing["discatch_special"] = "discatch_special,1"
                 if self.item_vars["Unlimited Snacks"].get():
                     existing["unlimited_snacks"] = "unlimited_snacks,1"
                 items.text = ';'.join(existing.values())
             tree.write(self.current_file, encoding='utf-8', xml_declaration=True)
+            self.status_var.set("Save file updated!")
             messagebox.showinfo("Success", "Save file updated!")
         except Exception as e:
+            self.status_var.set("Error saving file")
             messagebox.showerror("Error", f"Save failed:\n{str(e)}")
             self.restore_backup()
 
@@ -162,8 +215,10 @@ class SaveEditor:
             return
         try:
             shutil.copy(backups[-1], self.current_file)
+            self.status_var.set(f"Restored backup from {backups[-1].name}")
             messagebox.showinfo("Restored", f"Restored backup from {backups[-1].name}")
         except Exception as e:
+            self.status_var.set("Error restoring backup")
             messagebox.showerror("Error", f"Restore failed:\n{str(e)}")
 
     # Feature implementations (placeholders)
@@ -197,6 +252,9 @@ class SaveEditor:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.iconbitmap("profile.ico")
+    try:
+        root.iconbitmap("profile.ico")
+    except:
+        pass  # Skip if icon not available
     app = SaveEditor(root)
     root.mainloop()
