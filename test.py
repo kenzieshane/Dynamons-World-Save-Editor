@@ -197,5 +197,6 @@ class SaveEditor:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    root.iconbitmap("profile.ico")
     app = SaveEditor(root)
     root.mainloop()
