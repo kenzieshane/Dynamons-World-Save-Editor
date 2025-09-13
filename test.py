@@ -8,6 +8,17 @@ from PIL import Image, ImageTk
 import urllib.request
 import io
 import os
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 class SaveEditor:
@@ -73,7 +84,7 @@ class SaveEditor:
         about_win.resizable(False, False)  # make it fixed size
     
         try:
-            logo = Image.open("logo.png")  # replace with your logo filename
+            logo = Image.open(resource_path("logo.png"))  # replace with your logo filename
             logo = logo.resize((50, 50))  # optional: resize
             self.logo_img = ImageTk.PhotoImage(logo)  # keep a reference
             ttk.Label(about_win, image=self.logo_img).pack(pady=10)
@@ -210,7 +221,7 @@ class SaveEditor:
     def get_image_label(self, dynamon_name, parent):
         try:
             # Construct the path to the image file
-            image_path = f"images/{dynamon_name.lower()}/icon.png"
+            image_path = resource_path(f"images/{dynamon_name.lower()}.png")
 
             # Open and display the image
             img = Image.open(image_path)
@@ -321,7 +332,7 @@ class SaveEditor:
                 if element is not None:
                     element.text = var.get()
             # Save items
-            items = root.find('.//string[@name="dynamons_worlditems_DATA"]')
+            items = root.find('.//string[@name="dynamons_worldITEMS_DATA"]')
             if items is not None:
                 existing = {k.split(',')[0]: k for k in (items.text or "").split(';') if k}
                 # This logic for item_vars seems incorrect based on the create_items_tab method
@@ -404,7 +415,7 @@ class SaveEditor:
 if __name__ == "__main__":
     root = tk.Tk()
     try:
-        root.iconbitmap("profile.ico")
+        root.iconbitmap(resource_path("profile.ico"))
     except:
         pass  # Skip if icon not available
     app = SaveEditor(root)
