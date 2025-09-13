@@ -10,11 +10,11 @@ this is the game's link: https://play.google.com/store/apps/details?id=com.funto
 ## What does it support?
 ## Enemy Data, Dynamons Stat, Moves, and etc.
 Yes, introducing my not trademarked THE WHOLE THING EDITOR (-TM) which can edit a bunch of things
-![New Editor](screenshot_9.png)
+![New Editor](Screenshot_9.png)
 
 ## Game Save Data Editor
 Well, it supports editing (or will be) the following aspect of the game:
-![Save Editor](screenshot_8.png)
+![Save Editor](Screenshot_8.png)
 
 | key | Meaning |
 |---|---|
