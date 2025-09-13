@@ -56,6 +56,11 @@ class SaveEditor:
         self.create_items_tab(items_frame)
         notebook.add(items_frame, text="Items")
 
+        # Party Tab
+        party_frame = ttk.Frame(notebook)
+        self.create_party_tab(party_frame)
+        notebook.add(party_frame, text="Party")
+
         # Debug Tab
         debug_frame = ttk.Frame(notebook)
         self.create_debug_tab(debug_frame)
@@ -113,6 +118,134 @@ class SaveEditor:
         ttk.Button(frame, text="Unlock All Avatars", command=self.unlock_avatars).grid(row=1, pady=5)
         ttk.Button(frame, text="Restore Backup", command=self.restore_backup).grid(row=2, pady=5)
 
+    def create_party_tab(self, frame):
+        container = ttk.Frame(frame)
+        canvas = tk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        self.dynamons_frame = ttk.Frame(canvas)
+
+        self.dynamons_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=self.dynamons_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        container.pack(fill=tk.BOTH, expand=True)
+        canvas.pack(side="left", fill=tk.BOTH, expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.dynamons = []
+        self.dynamon_widgets = []
+
+    def find_and_parse_dynamons_data(self, root):
+        dynamons_data_string = None
+        for string_tag in root.findall(".//string"):
+            if string_tag.get("name") == "dynamons_worldMONS_DATA":
+                dynamons_data_string = string_tag.text
+                break
+        
+        if dynamons_data_string:
+            self.dynamons = self.parse_dynamons_string(dynamons_data_string)
+
+    def parse_dynamons_string(self, data_string):
+        dynamons = []
+        parts = data_string.strip().split(';')
+        for part in parts:
+            if not part:
+                continue
+            attributes = part.split(',')
+            if len(attributes) < 8: continue
+            dynamon = {
+                "name": attributes[0],
+                "level": attributes[1],
+                "health": attributes[2],
+                "unknown1": attributes[3],
+                "unknown2": attributes[4],
+                "value1": attributes[5],
+                "unknown3": attributes[6],
+                "value2": attributes[7],
+            }
+            dynamons.append(dynamon)
+        return dynamons
+
+    def display_dynamons(self):
+        for widget in self.dynamons_frame.winfo_children():
+            widget.destroy()
+        
+        self.dynamon_widgets = []
+
+        for i, dynamon in enumerate(self.dynamons):
+            dynamon_frame = ttk.Frame(self.dynamons_frame, relief=tk.RIDGE, padding=5)
+            dynamon_frame.pack(pady=5, fill=tk.X)
+
+            widgets = {}
+
+            img_label = self.get_image_label(dynamon["name"], dynamon_frame)
+            img_label.grid(row=0, column=0, rowspan=4, padx=5)
+
+            ttk.Label(dynamon_frame, text="Name:").grid(row=0, column=1, sticky=tk.W)
+            name_entry = ttk.Entry(dynamon_frame)
+            name_entry.insert(0, dynamon["name"])
+            name_entry.grid(row=0, column=2, sticky=tk.W)
+            widgets['name'] = name_entry
+
+            ttk.Label(dynamon_frame, text="Level:").grid(row=1, column=1, sticky=tk.W)
+            level_entry = ttk.Entry(dynamon_frame)
+            level_entry.insert(0, dynamon["level"])
+            level_entry.grid(row=1, column=2, sticky=tk.W)
+            widgets['level'] = level_entry
+            
+            ttk.Label(dynamon_frame, text="Health:").grid(row=2, column=1, sticky=tk.W)
+            health_entry = ttk.Entry(dynamon_frame)
+            health_entry.insert(0, dynamon["health"])
+            health_entry.grid(row=2, column=2, sticky=tk.W)
+            widgets['health'] = health_entry
+            
+            self.dynamon_widgets.append(widgets)
+
+    def get_image_label(self, dynamon_name, parent):
+        try:
+            # Construct the path to the image file
+            image_path = f"images/{dynamon_name.lower()}/icon.png"
+
+            # Open and display the image
+            img = Image.open(image_path)
+            img = img.resize((100, 100)) # Resize if necessary
+            img_tk = ImageTk.PhotoImage(img)
+
+            label = ttk.Label(parent, image=img_tk)
+            label.image = img_tk # Keep a reference
+
+        except FileNotFoundError:
+            # If image is not found, show a placeholder
+            img = Image.new('RGB', (100, 100), color = 'gray')
+            img_tk = ImageTk.PhotoImage(img)
+            label = ttk.Label(parent, image=img_tk)
+            label.image = img_tk
+        except Exception as e:
+            label = ttk.Label(parent, text="Image Error")
+
+        return label
+
+    def update_dynamons_from_ui(self):
+        if not hasattr(self, 'dynamon_widgets'): return
+        for i, widgets in enumerate(self.dynamon_widgets):
+            self.dynamons[i]['name'] = widgets['name'].get()
+            self.dynamons[i]['level'] = widgets['level'].get()
+            self.dynamons[i]['health'] = widgets['health'].get()
+
+    def serialize_dynamons_to_string(self):
+        if not hasattr(self, 'dynamons'): return ""
+        new_data_parts = []
+        for dynamon in self.dynamons:
+            part = f"{dynamon['name']},{dynamon['level']},{dynamon['health']},{dynamon['unknown1']},{dynamon['unknown2']},{dynamon['value1']},{dynamon['unknown3']},{dynamon['value2']}"
+            new_data_parts.append(part)
+        return ';'.join(new_data_parts) + ';'
+
     def load_default_from_url(self):
         """Load the default save file from a URL"""
         try:
@@ -138,6 +271,9 @@ class SaveEditor:
             for key, var in self.vars.items():
                 element = root.find(f'.//string[@name="{key}"]')
                 var.set(element.text if element is not None else "")
+
+            self.find_and_parse_dynamons_data(root)
+            self.display_dynamons()
                 
             self.status_var.set("Default save file loaded successfully!")
             messagebox.showinfo("Success", "Default save file loaded from URL!")
@@ -161,6 +297,10 @@ class SaveEditor:
             for key, var in self.vars.items():
                 element = root.find(f'.//string[@name="{key}"]')
                 var.set(element.text if element is not None else "")
+
+            self.find_and_parse_dynamons_data(root)
+            self.display_dynamons()
+
             self.status_var.set("Save file loaded successfully!")
             messagebox.showinfo("Success", "Save file loaded successfully!")
         except Exception as e:
@@ -181,16 +321,27 @@ class SaveEditor:
                 if element is not None:
                     element.text = var.get()
             # Save items
-            items = root.find('.//string[@name="dynamons_worldITEMS_DATA"]')
+            items = root.find('.//string[@name="dynamons_worlditems_DATA"]')
             if items is not None:
                 existing = {k.split(',')[0]: k for k in (items.text or "").split(';') if k}
-                if self.item_vars["Unlimited Heal Spray"].get():
+                # This logic for item_vars seems incorrect based on the create_items_tab method
+                # Assuming item_vars keys are "Heal Spray", "Discatch Special", "Unlimited Snacks"
+                if self.item_vars["Heal Spray"].get():
                     existing["heal_spray"] = "heal_spray,9999"
                 if self.item_vars["Discatch Special"].get():
                     existing["discatch_special"] = "discatch_special,1"
                 if self.item_vars["Unlimited Snacks"].get():
                     existing["unlimited_snacks"] = "unlimited_snacks,1"
                 items.text = ';'.join(existing.values())
+
+            # Save party data
+            self.update_dynamons_from_ui()
+            new_dynamons_string = self.serialize_dynamons_to_string()
+            for string_tag in root.findall(".//string"):
+                if string_tag.get("name") == "dynamons_worldMONS_DATA":
+                    string_tag.text = new_dynamons_string
+                    break
+
             tree.write(self.current_file, encoding='utf-8', xml_declaration=True)
             self.status_var.set("Save file updated!")
             messagebox.showinfo("Success", "Save file updated!")

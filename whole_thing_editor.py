@@ -8,7 +8,7 @@ class WholeThingEditor(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("The Whole Thing Editor(TM) - v2.0")
+        self.title("The Whole Thing Editor(TM) - v1.63")
         self.geometry("800x600")
 
         self.current_file_path = None
