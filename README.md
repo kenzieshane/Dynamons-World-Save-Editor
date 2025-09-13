@@ -24,6 +24,7 @@ you'll need to have [root access](https://en.wikipedia.org/wiki/Rooting_(Android
 ## What does it support?
 ## Enemy Data, Dynamons Stat, Moves, and etc.
 Yes, introducing my not trademarked THE WHOLE THING EDITOR (-TM) which can edit a bunch of things
+![New Esitor](Screenshot_10.png)
 ![New Editor](Screenshot_9.png)
 
 ## Game Save Data Editor
