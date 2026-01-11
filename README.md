@@ -2,6 +2,9 @@
 
 ![my_image](readme/SaveEsitor_20250905_053416_0000.png)
 
+> [!IMPORTANT] 
+> Regrettably made by vibe coding aka using AI. This editor is only made for a quick dumb purpose. For an actual educated hack, in which i done research manually for: see the "Le classic hacking method" part. 
+
 A save editor for the infamous pokemon-styled game, Dynamons World! This game features an interesting card based combat system and a unique story... Also online PvP capabilities!!
 Catch and train the greatest team of Dynamons and challenge your friends in realtime online multiplayer PvP battles. Explore an open world searching for the rarest and strongest monsters. Fight tough Captains and prove your skills to become the best RPG battle master in the Dynamons Kingdom!
 
